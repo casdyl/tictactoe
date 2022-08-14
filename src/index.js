@@ -41,10 +41,13 @@ class Board extends React.Component {
   }
 
   // Called by Square when clicked because of onClick={() => this.handleClick(i)} in renderSquare.
-  // Flips the value of xIsNext.
+  // Flips the value of xIsNext, return early and ignore click if someone has won or a Square is already filled.
   // slice: creates a copy of the squares array to modify instead of modifying existing array.
   handleClick(i) {
     const squares = this.state.squares.slice();
+    if (calculateWinner(squares) || squares[i]) {
+      return;
+    }
     squares[i] = this.state.xIsNext ? "X" : "O";
     this.setState({
       squares: squares,
@@ -65,9 +68,15 @@ class Board extends React.Component {
   }
 
   // Call calculateWinner(squares) to check if a player has won.
-  // If a player has won: display winning text.
+  // If a player has won: display winning text: "Winner: X" or "Winner: O"
   render() {
-    const status = "Next player: " + (this.state.xIsNext ? "X" : "O");
+    const winner = calculateWinner(this.state.squares);
+    let status;
+    if (winner) {
+      status = "Winner " + winner;
+    } else {
+      status = "Next player: " + (this.state.xIsNext ? "X" : "O");
+    }
 
     return (
       <div>
@@ -128,7 +137,7 @@ function calculateWinner(squares) {
     [2, 4, 6],
   ];
   for (let i = 0; i < lines.length; i++) {
-    const [a, b, c] = lines(i);
+    const [a, b, c] = lines[i];
     if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
       return squares[a];
     }

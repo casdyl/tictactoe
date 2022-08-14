@@ -2,6 +2,8 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
 
+// https://reactjs.org/tutorial/tutorial.html
+
 // ==============================================================================================================
 
 // To collect data from multiple children (Squares) or have 2 child components communicate with each other,
@@ -24,63 +26,21 @@ function Square(props) {
 }
 
 // ==============================================================================================================
-// BOARD [PARENT] - REACT COMPONENT 2: Renders 9 squares. Pass a prop called value to the child Square.
-//          DON'T: Board ask each Square for the Square's state - code becomes difficult to understand,
-//                 susceptible to bugss, and hard to refactor.
-//          DO: Store the game's state in parent Board component instead of in each Square. The Board component
-//                 can tell each Square what to display by passing a prop.
+// BOARD [PARENT] - REACT COMPONENT 2: Receive squares and onClick props from Game component by passing location
+//                      of each Square to onClick to indicate which Square was clicked.
 class Board extends React.Component {
-  // Set Board's INITIAL STATE to contain array of 9 nulls corresponding to 9 squares.
-  // xIsNext: [BOOLEAN] Flips each time a player moves.
-  constructor(props) {
-    super(props);
-    this.state = {
-      squares: Array(9).fill(null),
-      xIsNext: true,
-    };
-  }
-
-  // Called by Square when clicked because of onClick={() => this.handleClick(i)} in renderSquare.
-  // Flips the value of xIsNext, return early and ignore click if someone has won or a Square is already filled.
-  // slice: creates a copy of the squares array to modify instead of modifying existing array.
-  handleClick(i) {
-    const squares = this.state.squares.slice();
-    if (calculateWinner(squares) || squares[i]) {
-      return;
-    }
-    squares[i] = this.state.xIsNext ? "X" : "O";
-    this.setState({
-      squares: squares,
-      xIsNext: !this.state.xIsNext,
-    });
-  }
-
-  // Each Square receives a value prop that will either be 'X', 'O', or null.
-  // Passing down 2 props from Board => Square; value and onClick.
-  // onClick: function that Square can call when clicked.
   renderSquare(i) {
     return (
       <Square
-        value={this.state.squares[i]}
-        onClick={() => this.handleClick(i)}
+        value={this.props.squares[i]}
+        onClick={() => this.props.onClick(i)}
       />
     );
   }
 
-  // Call calculateWinner(squares) to check if a player has won.
-  // If a player has won: display winning text: "Winner: X" or "Winner: O"
   render() {
-    const winner = calculateWinner(this.state.squares);
-    let status;
-    if (winner) {
-      status = "Winner " + winner;
-    } else {
-      status = "Next player: " + (this.state.xIsNext ? "X" : "O");
-    }
-
     return (
       <div>
-        <div className="status">{status}</div>
         <div className="board-row">
           {this.renderSquare(0)}
           {this.renderSquare(1)}
@@ -103,16 +63,85 @@ class Board extends React.Component {
 
 // ==============================================================================================================
 // GAME - REACT COMPONENT 3: renders board with placeholder values
+// Want top-level Game component to display past list of moves by accessing history.
+// [history array] step variable refers to the current history element VALUE (not assigned to anything)
+//                 move variable refers to the current history element INDEX
 class Game extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      history: [
+        {
+          squares: Array(9).fill(null),
+        },
+      ],
+      stepNumber: 0,
+      xIsNext: true,
+    };
+  }
+
+  handleClick(i) {
+    const history = this.state.history.slice(0, this.state.stepNumber + 1);
+    const current = history[history.length - 1];
+    const squares = current.squares.slice();
+    if (calculateWinner(squares) || squares[i]) {
+      return;
+    }
+    squares[i] = this.state.xIsNext ? "X" : "O";
+    this.setState({
+      history: history.concat([
+        {
+          squares: squares,
+        },
+      ]),
+      stepNumber: history.length,
+      xIsNext: !this.state.xIsNext,
+    });
+  }
+
+  jumpTo(step) {
+    this.setState({
+      stepNumber: step,
+      xIsNext: step % 2 === 0,
+    });
+  }
+
+  // Use most recent history entry to determine and dispolay game's status.
+  // Create list item <li> containing a button <button> for each move in game history.
+  // * EACH CHILD IN AN ARRAY/ITERATOR SHOULD HAVE UNIQUE "KEY" PROP *
+  // [button] has onClick handler which calls this.jumpTo().
   render() {
+    const history = this.state.history;
+    const current = history[this.state.stepNumber];
+    const winner = calculateWinner(current.squares);
+
+    const moves = history.map((step, move) => {
+      const desc = move ? "Go to move #" + move : "Go to game start";
+      return (
+        <li key={move}>
+          <button onClick={() => this.jumpTo(move)}>{desc}</button>
+        </li>
+      );
+    });
+
+    let status;
+    if (winner) {
+      status = "Winner: " + winner;
+    } else {
+      status = "Next player: " + (this.state.xIsNext ? "X" : "O");
+    }
+
     return (
       <div className="game">
         <div className="game-board">
-          <Board />
+          <Board
+            squares={current.squares}
+            onClick={(i) => this.handleClick(i)}
+          />
         </div>
         <div className="game-info">
-          <div>{/* status */}</div>
-          <ol>{/* TODO */}</ol>
+          <div>{status}</div>
+          <ol>{moves}</ol>
         </div>
       </div>
     );
@@ -144,3 +173,34 @@ function calculateWinner(squares) {
   }
   return null;
 }
+
+// Store past squares arrays in another array called history.
+// Represents all board states, from first to last move, shaped like the following:
+/*  history = [
+     // Before first move
+     {
+       squares: [
+            null, null, null, 
+            null, null, null, 
+            null, null, null,
+        ]
+     },
+    // After first move
+    {
+        squares: [
+            null, null, null, 
+            null, 'X" , null, 
+            null, null, null,
+        ]
+    },
+    // After second move
+    {
+        squares: [
+            null, null, null, 
+            null, 'X' , null, 
+            null, null, 'O' ,
+        ]
+    },
+    // ...
+    ]
+*/

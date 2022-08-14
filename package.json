@@ -1,6 +1,6 @@
 {
   "homepage": "https://casdyl.github.io/tictactoe/",
-  "name": "my-app",
+  "name": "tictactoe",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
